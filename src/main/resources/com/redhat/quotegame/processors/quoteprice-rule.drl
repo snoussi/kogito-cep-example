@@ -1,0 +1,27 @@
+package com.redhat.quotegame.processors
+
+import com.redhat.quotegame.model.Order
+import com.redhat.quotegame.model.OrderType
+import com.redhat.quotegame.model.Quote
+import java.util.List
+
+declare Order
+  @role(event)
+  @timestamp (timestamp)
+  @expires( 2m )
+end
+
+rule "3 successives BUY Orders of same Quote"
+   when
+       $q : Quote()
+       $list : List( size == 3 ) from collect ( Order(orderType == OrderType.BUY , quote == $q.symbol)
+                                                   over window:length(3)
+                                                   from entry-point orderStream )
+   then
+       System.out.println(drools.getRule().getName());
+       $q.setPrice($q.getPrice()+0.01);
+       for ( Object $o : $list){
+           System.out.println("Retracting "+$o);
+           delete($o);
+       }
+end
